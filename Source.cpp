@@ -10,12 +10,33 @@ const int BUCKET_num = 15; // No. of buckets for numbers & spicitial cards in UN
 const int BUCKET_color = 4; // No. of buckets for  'R' 'G' 'B' 'Y'  Colors
 
 const int Size = 108;//No. of UNO cards
-
 struct card //our card in UNO has Value & color
 {
     int value;
     char Color;
 };
+struct Ground {
+    card Ground_Cards[Size]; //array that include the all cards played on the ground
+    int top = 0;
+};
+
+
+//this Queue is representing the pulling cards
+class Queue//Queue using Array with two indices   to O(1) of enqueue & dequeue
+{
+
+public:
+    card arr[Size];//array that will include the unsorted cards after randomly rearrange
+    int Front = -1;
+    int Tail = -1;
+
+    void enqueue(class Queue*, card);//to put cards in the queue
+    card dequeue(class Queue*);//to get cards from queue
+
+};
+Queue Insert_to_Pulling_Cards(card[]);
+
+
 //nodes of linked list
 struct node {
     card item;
@@ -41,21 +62,37 @@ public:
 
     // as we define the list from the hash table to have consistant type of data -cards-
     //so we will delete first node only -if exist- every time
+
     void delete_node(node** head_ref /*ADDRESS OF THE HEAD*/, card key)
     {
-        node* temp = *head_ref;//temp for the pointer Head
-
-        if ((*head_ref) != NULL)
+        node* temp = *head_ref;
+        node* prev = *head_ref;
+        if ((*head_ref)->item.value == key.value&& (*head_ref)->item.Color== key.Color)
         {
             (*head_ref) = (*head_ref)->next;
             delete temp;
             legnth--;
         }
-        else {
-            cout << "\n this card is not exist\n";
-        }
 
+        while (temp != NULL && (temp->item.value != key.value || temp->item.Color != key.Color))
+        {
+            prev = temp;
+            temp = temp->next;
+        }
+        if (temp == NULL)
+        {
+            cout << "\n card is not found \n" << endl;
+            return;
+        }
+        else
+        {
+            prev->next = temp->next;
+            temp->next = NULL;
+            delete temp;
+            legnth--;
+        }
     }
+
     // display all nodes of the list
     void display(node* curr/*Head*/)
     {
@@ -87,8 +124,10 @@ public:
     // inserts a key into hash table
     void insertItem(card my_card);
 
+    void deletecard(card);
+
     // deletes a key from hash table
-    void deleteItem(card key);
+    card Get_card_by_color(card key);
 
     // hash function to map colors to key
     int hashFunction(card my_card)
@@ -103,8 +142,7 @@ public:
             return 2;
         case 'Y':
             return 3;
-        default:
-            break;
+        
         }
 
     }
@@ -124,9 +162,9 @@ public:
 
     // inserts a key into hash table
     void insertItem(card my_card);
-
+    void deletecard(card);
     // deletes a key from hash table
-    void deleteItem(card key);
+    card Get_card_by_num(card key);
 
     // hash function to map values to key
     int hashFunction(card my_card) {
@@ -148,47 +186,199 @@ class Player
     Hash_color UNO_Color;
 
 public:
-    //put the card into UNO_Numbers & UNO_Color both
-    void get_Card(card);
-
-
+    
+    void get_Card(card);//put the card into UNO_Numbers & UNO_Color both
+    bool check_on_Ground_Top_and_play(card , Ground);
+    void Search_to_play(Ground,Queue);
+    void delete_Card(card);//delete the card from UNO_Numbers & UNO_Color both
 
 
 };
+//put the card into UNO_Numbers & UNO_Color both
 void Player::get_Card(card input)
 {
     UNO_Numbers.insertItem(input);
     UNO_Color.insertItem(input);
 }
-class special_cards
+//delete the card from UNO_Numbers & UNO_Color both
+void Player::delete_Card(card input)
 {
-public:
-    card Draw_Two;
-    card Wild_Draw_Four;
-   
-};
+    UNO_Numbers.deletecard(input);
+    UNO_Color.deletecard(input);
+}
 
-//this Queue is representing the pulling cards
-class Queue//Queue using Array with two indices   to O(1) of enqueue & dequeue
+bool Player::check_on_Ground_Top_and_play(card check, Ground array)
 {
 
-public:
-    card arr[Size];//array that will include the unsorted cards after randomly rearrange
-    int Front = -1;
-    int Tail = -1;
+    if (check.value != -1)//NOT FOUND IN PLAYER CARDS
+    {
+        array.top++;
+        array.Ground_Cards[array.top] = check;
+        delete_Card(check);
+        return true;
+    }
+    else {
+        return false;
+    }
 
-    void enqueue(class Queue*, card);//to put cards in the queue
-    card dequeue(class Queue*);//to get cards from queue
+}
 
-};
-Queue Insert_to_Pulling_Cards(card[]);
+void Player::Search_to_play(Ground array,Queue pulling)
+{
+    card Card_top_ground = array.Ground_Cards[array.top];//TOP CARD IN GROUND
+    card check;//-1 MEANS NOT FOUND
+
+    card check1[4], check2[4];//special cards
+    for (int i = 0; i < 4; i++)
+    {
+        check1[i].value = 10;// wild
+        check2[i].value = 11;// wild +4
+        switch (i)
+        {
+        case 0: {
+            check1[i].Color = 'R';
+            check2[i].Color = 'R';
+            break;
+        }
+        case 1: {
+            check1[i].Color = 'G';
+            check2[i].Color = 'G';
+            break;
+        }
+        case 2: {
+            check1[i].Color = 'B';
+            check2[i].Color = 'B';
+            break;
+        }
+        case 3: {
+            check1[i].Color = 'Y';
+            check2[i].Color = 'Y';
+            break;
+        }
+        }
+    }
+    
+
+    bool flag;/*true thus i played and delete the card so i finished 
+    false thus we need to try another thing*/
+
+    check = UNO_Numbers.Get_card_by_num(Card_top_ground);//return -1 if not found
+
+    flag=check_on_Ground_Top_and_play(check, array);//check by value of card
+    if (flag)
+    {
+        return;
+    }
+    else
+    {
+        check = UNO_Color.Get_card_by_color(Card_top_ground);//return -1 if not found
+        flag = check_on_Ground_Top_and_play(check, array);//check by color of card
+        if (flag)
+        {
+            return;
+        }
+        else {
+            for (int i = 0; i < 4; i++)
+            {
+                check = UNO_Numbers.Get_card_by_num(check1[i]);//return -1 if not found
+                  flag = check_on_Ground_Top_and_play(check, array);//check special 
+                  if (flag)
+                      break;
+            }if (flag)
+            {
+                return;
+            }
+            else
+                for(int i = 0; i < 4; i++)
+            {
+                check = UNO_Numbers.Get_card_by_num(check2[i]);//return -1 if not found
+                flag = check_on_Ground_Top_and_play(check, array);//check special 
+                if (flag)
+                    break;
+            }if (flag)
+            {
+                return;
+            }
+            else {
+                //if all cases return false then 1)pull -----2) thry to play pulled in '1'
+                card pulled;
+                pulled = pulling.dequeue(&pulling);
+                //  card temp = array.Ground_Cards[array.top];
+                if (pulled.value == -1)
+                {
+                    pulling = Insert_to_Pulling_Cards(array.Ground_Cards);
+                    array.top = 0;
+                    array.Ground_Cards[array.top] = Card_top_ground;
+                    array.top++;
+                    pulled = pulling.dequeue(&pulling);
+
+                }
+                if (pulled.value == Card_top_ground.value || pulled.Color == Card_top_ground.Color || pulled.value == 10 || pulled.value == 11)
+                {
+                    array.Ground_Cards[array.top] = pulled;
+                    array.top++;
+                }
+                else
+                {
+                    get_Card(pulled);
+                }
+
+            }
+
+        }
+    }
+
+ }
+    
+
+
+
+
+
+
+
+//
+//class special_cards
+//{
+//public:
+//    card Wild;//value 10    color ALL
+//    card Wild_Draw_Four;//value=11     color ALL
+//    card Skip;//value=12
+//    card Reverse;//value=13
+//    card Draw_Two;//value= 14
+//    
+//    special_cards()//default constractor 
+//    {
+//        Wild.value = 10;
+//        Wild_Draw_Four.value = 11;
+//        Skip.value = 12;
+//        Reverse.value= 13;
+//        Draw_Two.value = 14;
+//    }
+//
+//     
+//     int get_values_num(card);
+//     char get_values_color(card);
+//};
+//int special_cards:: get_values_num(card my_card) {
+//    return  my_card.value;
+//
+//}
+//char special_cards:: get_values_color(card my_card)
+//{
+//    return my_card.Color;
+//}
+//
+//
+//
+
+
 
 int main()
 {
-
+    
     card My_Cards[Size];//array that include the all cards before rearrange it randomly
 
-    card Ground_Cards[Size];//array that include the all cards played on the ground
 
     Get_Cards_of_UNO(My_Cards);// to load the UNO CARDS
 
@@ -376,12 +566,19 @@ void Hash::insertItem(card key)
     table[index].push(&table[index].Head, key);
 }
 
-void Hash::deleteItem(card key)
+card Hash::Get_card_by_num(card key)
 {
+    card back;//the returned card
+    back.value = -1;//initial unfound
     // get the hash index of key
     int index = hashFunction(key);
+    if (table[index].Head)//if the required list is empty
+    {
+        back = key;
+        return back;
+    }
+    return back;
 
-    table[index].delete_node(&table[index].Head, key);
 }
 
 // function to display hash table of my cards of UNO by numbers not colors
@@ -404,12 +601,18 @@ void Hash_color::insertItem(card key)
     table[index].push(&table[index].Head, key);
 }
 
-void Hash_color::deleteItem(card key)
+card Hash_color::Get_card_by_color(card key)
 {
+    card back;//the returned card
+    back.value = -1;//initial unfound
     // get the hash index of key
     int index = hashFunction(key);
-
-    table[index].delete_node(&table[index].Head, key);
+    if (table[index].Head)//if the required list is empty
+    {
+        back = key;
+        return back;
+    }
+    return back;
 }
 
 // function to display hash table of my cards of UNO by colors not number
@@ -420,4 +623,24 @@ void Hash_color::displayHash() {
         table[i].display(table[i].Head);
     }
 
+}
+
+void Hash::deletecard(card key)
+{// get the hash index of key
+    int index = hashFunction(key);
+    if (table[index].Head)//if the required list is empty
+    {
+        table[index].delete_node(&table[index].Head, key);
+
+    }
+}
+void Hash_color::deletecard(card key)
+{
+    int index = hashFunction(key);
+    if (table[index].Head)//if the required list is empty
+    {
+
+        table[index].delete_node(&table[index].Head, key);
+
+    }
 }
